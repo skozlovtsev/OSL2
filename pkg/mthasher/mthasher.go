@@ -1,36 +1,79 @@
 package mthasher
 
-import "context"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"sync"
+)
+
+const start = 97 // utf8 encoded of "a"
+
+type iHashFunc func([]byte) [32]byte
 
 type MultithreadHasher struct {
-	Close      func()
-	AnswerChan chan [32]byte
-	threads    []*Thread
-	hashFunc   iHashFunc
-	ctx        context.Context
-	base       int
-	len        int
-	cid        uint8
+	spans    [][2]int
+	hashFunc iHashFunc
+	base     int
+	len      int
 }
 
-func NewMultithreadHasher(close func(), hashFunc iHashFunc, answerChan chan [32]byte, ctx context.Context, base int, len int) *MultithreadHasher {
+func NewMultithreadHasher(hashFunc iHashFunc, base int, len int) *MultithreadHasher {
 	return &MultithreadHasher{
-		Close:      close,
-		AnswerChan: answerChan,
-		hashFunc:   hashFunc,
-		ctx:        ctx,
-		base:       base,
-		len:        len,
+		hashFunc: hashFunc,
+		base:     base,
+		len:      len,
 	}
 }
 
 func (h *MultithreadHasher) Add(span [2]int) {
-	h.threads = append(h.threads, NewThread(h.cid, h.AnswerChan, h.hashFunc, h.ctx, h.base, h.len, span))
-	h.cid++
+	h.spans = append(h.spans, span)
 }
 
-func (h *MultithreadHasher) Run() {
-	for _, thread := range h.threads {
-		go thread.Start()
+func (h *MultithreadHasher) Run(cases []string) {
+	var wg sync.WaitGroup
+	for n, span := range h.spans {
+		wg.Add(1)
+		fmt.Println(n, " starting with span", span[0], span[1])
+		// Starting goroutine
+		go func(span [2]int, cases []string) {
+
+			defer wg.Done()
+
+			for w := span[0]; w <= span[1]; w++ {
+				word := Word(w, h.base, h.len)
+
+				//fmt.Println(string(word))
+
+				a := h.hashFunc(word)
+
+				// Validation
+				if len(cases) == 0 {
+					return
+				}
+
+				for i, c := range cases {
+					if c == hex.EncodeToString(a[:]) {
+						fmt.Println(c, "answer: ", string(word))
+						cases = append(cases[:i], cases[i:]...)
+					}
+				}
+			}
+		}(span, cases)
 	}
+
+	wg.Wait()
+}
+
+func SHA256(data []byte) [32]byte {
+	return sha256.Sum256(data)
+}
+
+func Word(data int, base int, len int) []byte {
+	a := make([]byte, 0)
+	for i := 0; i < len; i++ {
+		a = append([]byte{start + byte(data%base)}, a...)
+		data = data / base
+	}
+	return a
 }
