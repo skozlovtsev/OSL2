@@ -41,16 +41,16 @@ func (h *MultithreadHasher) Run(cases *[]string) {
 			defer wg.Done()
 
 			for w := span[0]; w <= span[1]; w++ {
+				// Validation
+				if len(*cases) == 0 {
+					return
+				}
+
 				word := Word(w, h.base, h.len)
 
 				//fmt.Println(string(word))
 
 				a := h.hashFunc(word)
-
-				// Validation
-				if len(*cases) == 0 {
-					return
-				}
 
 				for i, c := range *cases {
 					if c == hex.EncodeToString(a[:]) {
