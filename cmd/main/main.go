@@ -5,38 +5,27 @@ import (
 	"math"
 	"time"
 
+	"github.com/skozlovtsev/OSL2/pkg/config"
 	"github.com/skozlovtsev/OSL2/pkg/mthasher"
 )
 
-var (
-	base    = 26
-	len     = 5
-	threads = 1
-
-	cases = []string{
-		"1115dd800feaacefdf481f1f9070374a2a81e27880f187396db67958b207cbad",
-		"3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b",
-		"74e1bb62f8dabb8125a58852b63bdf6eaef667cb56ac7f7cdba6d7305c50a22f",
-	}
-)
-
 func main() {
-	fmt.Scanf("%d", &threads)
+	mthasher.Start = config.Config.Start
 
-	MTHasher := mthasher.NewMultithreadHasher(mthasher.SHA256, base, len)
+	MTHasher := mthasher.NewMultithreadHasher(mthasher.SHA256, config.Config.Base, config.Config.Len)
 
-	allVariances := int(math.Pow(float64(base), float64(len)))
+	allVariances := int(math.Pow(float64(config.Config.Base), float64(config.Config.Len)))
 
-	spanSize := allVariances / threads
+	spanSize := allVariances / config.Config.Threads
 
-	lastSpanSize := spanSize + allVariances%threads
+	lastSpanSize := spanSize + allVariances%config.Config.Threads
 
 	start := 0
 
-	for i := 0; i < threads-1; i++ {
+	for i := 0; i < config.Config.Threads-1; i++ {
 		end := start + spanSize
 
-		MTHasher.Add([2]int{start, end})
+		MTHasher.Add([2]int{start, end - 1})
 
 		start = end
 	}
@@ -46,9 +35,11 @@ func main() {
 	MTHasher.Add([2]int{start, end})
 
 	// Start main loop
-	stime := time.Now().Unix()
+	stime := time.Now().UnixMilli()
 
-	MTHasher.Run(cases)
+	MTHasher.Run(&config.Config.Cases)
 
-	fmt.Println("time: ", time.Now().Unix()-stime)
+	timeUnixMilli := time.Now().UnixMilli() - stime
+
+	fmt.Printf("time: %d.%d\n", timeUnixMilli/1000, timeUnixMilli%1000)
 }

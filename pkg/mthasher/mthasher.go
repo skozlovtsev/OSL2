@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-const start = 97 // utf8 encoded of "a"
+var Start byte = 97 // utf8 encoded of "a"
 
 type iHashFunc func([]byte) [32]byte
 
@@ -30,13 +30,13 @@ func (h *MultithreadHasher) Add(span [2]int) {
 	h.spans = append(h.spans, span)
 }
 
-func (h *MultithreadHasher) Run(cases []string) {
+func (h *MultithreadHasher) Run(cases *[]string) {
 	var wg sync.WaitGroup
 	for n, span := range h.spans {
 		wg.Add(1)
 		fmt.Println(n, " starting with span", span[0], span[1])
 		// Starting goroutine
-		go func(span [2]int, cases []string) {
+		go func(span [2]int, cases *[]string) {
 
 			defer wg.Done()
 
@@ -48,14 +48,14 @@ func (h *MultithreadHasher) Run(cases []string) {
 				a := h.hashFunc(word)
 
 				// Validation
-				if len(cases) == 0 {
+				if len(*cases) == 0 {
 					return
 				}
 
-				for i, c := range cases {
+				for i, c := range *cases {
 					if c == hex.EncodeToString(a[:]) {
 						fmt.Println(c, "answer: ", string(word))
-						cases = append(cases[:i], cases[i:]...)
+						*cases = append((*cases)[:i], (*cases)[i+1:]...)
 					}
 				}
 			}
@@ -72,7 +72,7 @@ func SHA256(data []byte) [32]byte {
 func Word(data int, base int, len int) []byte {
 	a := make([]byte, 0)
 	for i := 0; i < len; i++ {
-		a = append([]byte{start + byte(data%base)}, a...)
+		a = append([]byte{Start + byte(data%base)}, a...)
 		data = data / base
 	}
 	return a

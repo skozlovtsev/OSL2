@@ -2,4 +2,6 @@
 
 Simple GO program utilizing multiple goroutines to bruteforce passwords
 
-![Alt text](image.png)
+![example](image.png)
+
+To change run parameters edit the [config.json](./config.json) file
